@@ -1,12 +1,12 @@
 package com.elgun.Dto;
-
-import com.elgun.dao.entity.UserActive;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -15,12 +15,13 @@ import lombok.Setter;
 public class ReservationRequestDto {
 
     @NotNull
-    private Long bookId;
+    private LocalDateTime reservationTime;
+
+    @NotNull
+    private List<Long> bookIds;
 
     @NotNull
     private Long userId;
 
-    @NotNull
-    private UserActive userActive;
 
 }

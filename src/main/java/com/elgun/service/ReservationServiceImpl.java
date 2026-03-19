@@ -1,77 +1,103 @@
 package com.elgun.service;
-
-import com.elgun.Dto.ReservationRequestDto;
-import com.elgun.Dto.ReservationResponseDto;
-import com.elgun.dao.entity.*;
+import com.elgun.dao.entity.Book;
+import com.elgun.dao.entity.Reservation;
+import com.elgun.dao.entity.User;
 import com.elgun.dao.repository.BookRepository;
 import com.elgun.dao.repository.ReservationRepository;
-import com.elgun.dao.repository.UserRepository;
+import com.elgun.Dto.ReservationRequestDto;
+import com.elgun.Dto.ReservationResponseDto;
+import com.elgun.enumm.BookAvailability;
+import com.elgun.enumm.ReservationStatus;
+import com.elgun.enumm.UserActive;
 import com.elgun.exception.*;
+import com.elgun.fetcher.EntityFetch;
+import com.elgun.mapper.ReservationMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
 import java.util.List;
 
-import static com.elgun.ReservationMapper.mapReservationEntityToReservationResponseDto;
+import static com.elgun.constants.AppConstants.*;
 
 @Service
 @RequiredArgsConstructor
 public class ReservationServiceImpl implements ReservationService{
-    private final ReservationRepository reservationRepository;
+    private final EntityFetch entityFetch;
     private final BookRepository bookRepository;
-    private final UserRepository userRepository;
-
-    @Override
-    public void createReservation(ReservationRequestDto reservationRequestDto) {
-        Book book = fetchBookIfExists(reservationRequestDto.getBookId());
-       Integer count = findByUserIdAndUserActive(reservationRequestDto.getUserId(),UserActive.ACTIVE);
-        if (count<=3){
-            throw new BookCountExceeded("Book count exceeded 3");
-        }
-
-        if (book.getBookAvailability()==BookAvailability.AVAILABLE){
-            reservationRepository.save(Reservation.builder().bookId(book.getId())
-                    .time(LocalDateTime.now()).build());
-        }
-        else throw new BookIsNotAvailableException("Book is not available in stock");
-
-    }
+    private final ReservationMapper reservationMapper;
+    private final ReservationRepository reservationRepository;
 
 
     @Override
-    public ReservationResponseDto findReservationById(Long id) {
-        return mapReservationEntityToReservationResponseDto(fetchReservationIfExists(id));
+    @Transactional
+    public void createReservation(ReservationRequestDto requestDto) {
+        User user = entityFetch.fetchUserIfExists(requestDto.getUserId());
+        if (user.getUserActive() != UserActive.ACTIVE){
+            throw new UserNotActiveException(USER_NOT_ACTIVE);
+        }
+        List<Long> bookIds = requestDto.getBookIds();
+        if (bookIds.size()>3){
+            throw new BookCountExceeded(MAX_BOOK_LIMIT);
+        }
+        List<Book> books = new ArrayList<>();
+        for (Long bookId : bookIds) {
+            Book book = entityFetch.fetchBookIfExists(bookId);
+            if (book.getBookAvailability() != BookAvailability.AVAILABLE) {
+                throw new BookNotAvailableException(BOOK_NOT_AVAILABLE);
+            }
+            books.add(book);
+        }
+        for (Book book : books){
+            book.setBookAvailability(BookAvailability.UNAVAILABLE);
+        }
+        bookRepository.saveAll(books);
+            reservationRepository.save(reservationMapper.mapRequestDtoToEntity(requestDto,books,user));
     }
 
     @Override
-    @Scheduled(fixedRate = 7200000)
-    public void approveReservation(ReservationRequestDto reservationRequestDto) {
-        User user = fetchUserIfExists(reservationRequestDto.getUserId());
-        if (user.getUserRole()!=UserRole.ADMIN){
-            throw new UserIsNotAdminException("User is not admin");
+    @Transactional
+    public void approveReservation(Long id) {
+        Reservation reservation = entityFetch.fetchReservationIfExists(id);
+        if (reservation.getReservationStatus() != ReservationStatus.PENDING){
+            throw new InvalidReservationStatusException(INVALID_RESERVATION_STATUS);
         }
-        userRepository.save(user);
+        reservation.setReservationStatus(ReservationStatus.ACTIVE);
+        reservationRepository.save(reservation);
+    }
+
+    @Override
+    @Transactional
+    public void cancelReservation(Long id) {
+        Reservation reservation = entityFetch.fetchReservationIfExists(id);
+        if (reservation.getReservationStatus()==ReservationStatus.CANCELLED){
+            throw new InvalidReservationStatusException(INVALID_RESERVATION_STATUS);
+        }
+        reservation.setReservationStatus(ReservationStatus.CANCELLED);
+        List<Book> books = reservation.getBooks();
+        for (Book book : books) {
+            book.setBookAvailability(BookAvailability.AVAILABLE);
+        }
+        bookRepository.saveAll(books);
+        reservationRepository.save(reservation);
     }
 
 
-
-    private Book fetchBookIfExists(Long id){
-        return bookRepository.findById(id).orElseThrow(()->new BookNotFoundException("Book is not found"));
-    }
-    private Reservation fetchReservationIfExists(Long id){
-        return reservationRepository.findById(id).orElseThrow(()->new ReservationNotFoundException("Reservation is not found"));
-    }
-    private Integer findByUserIdAndUserActive(Long userId, UserActive active){
-       List<Reservation> reservations = reservationRepository.findByUserIdAndUserActive(userId,active);
-       Integer count = reservations.size();
-       return count;
-
-    }
-    private User fetchUserIfExists(Long userId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("User is not found"));
-        return user;
-
+    @Override
+    public ReservationResponseDto getReservationById(Long id) {
+        return reservationMapper.mapEntityToResponseDto(entityFetch.fetchReservationIfExists(id));
     }
 
+    @Override
+    public Page<ReservationResponseDto> getAllReservationsByUser(Long userId, int page, int size) {
+        User user = entityFetch.fetchUserIfExists(userId);
+        Pageable pageable = PageRequest.of(page,size);
+        return reservationRepository.findByUser_Id(userId,pageable).map(reservationMapper::mapEntityToResponseDto);
+    }
 }
+
+

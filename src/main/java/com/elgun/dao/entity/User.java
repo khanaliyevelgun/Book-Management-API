@@ -1,5 +1,7 @@
 package com.elgun.dao.entity;
 
+import com.elgun.enumm.UserActive;
+import com.elgun.enumm.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -7,7 +9,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@Table
+@Table(name = "users")
 @Entity
 @Builder
 public class User {
@@ -16,10 +18,20 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_active")
     @Enumerated(EnumType.STRING)
+    @Column(name = "user_role")
     private UserRole userRole;
 
+    @Column(name = "name")
+    private String name;
 
+    @Column(name = "email")
+    private String email;
 
+    @Column(name = "password")
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_active")
+    private UserActive userActive;
 }

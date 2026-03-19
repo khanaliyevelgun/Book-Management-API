@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: reservation
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/reservation
+    username: postgres
+    password: 1234
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  docker:
+    compose:
+      enabled: false
+  task:
+    scheduling:
+      enabled: true
+
+jwt:
+  secret: book-reservation-secret-key-must-be-at-least-256-bits-long-for-security
+  expiration: 86400000

@@ -1,14 +1,16 @@
 package com.elgun.service;
 
+
 import com.elgun.Dto.ReservationRequestDto;
 import com.elgun.Dto.ReservationResponseDto;
-import com.elgun.dao.entity.Reservation;
-import com.elgun.dao.entity.UserActive;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface ReservationService {
-    public void createReservation(ReservationRequestDto reservationRequestDto);
-    public ReservationResponseDto findReservationById(Long id);
-    public void approveReservation(ReservationRequestDto reservationRequestDto);
+    void createReservation(ReservationRequestDto requestDto);
+    void approveReservation(Long id);
+    void cancelReservation(Long id);
+    ReservationResponseDto getReservationById(Long id);
+    Page<ReservationResponseDto> getAllReservationsByUser(Long userId,int page,int size);
+
+
 }

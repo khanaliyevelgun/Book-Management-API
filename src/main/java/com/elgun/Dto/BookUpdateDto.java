@@ -1,6 +1,6 @@
 package com.elgun.Dto;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+
+import com.elgun.enumm.BookAvailability;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,22 +14,19 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Getter
 @Setter
-public class BookRequestDto {
 
-    @NotBlank
+public class BookUpdateDto {
+
     private String bookName;
 
-    @NotNull
     @PositiveOrZero
     private BigDecimal price;
 
-    @NotNull
     private Long bookCount;
 
-    @NotBlank
     private String authorName;
 
-    @NotNull
     private LocalDateTime publishDate;
 
+    private BookAvailability bookAvailability;
 }

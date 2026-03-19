@@ -1,6 +1,7 @@
-package com.elgun.Dto;
+package com.elgun.auth;
 
 import jakarta.validation.constraints.NotBlank;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,15 +11,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-
-public class UserRequestDto {
-    @NotBlank
-    private String name;
-
+public class LoginRequestDto {
     @NotBlank
     private String email;
-
     @NotBlank
     private String password;
-
 }
